@@ -15,9 +15,16 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
-const itemsRef = ref(database, 'items');
+let app, database, itemsRef;
+try {
+    app = initializeApp(firebaseConfig);
+    database = getDatabase(app);
+    itemsRef = ref(database, 'items');
+    console.log('Firebase initialized successfully');
+} catch (error) {
+    console.error('Firebase initialization error:', error);
+    alert('Firebase connection failed. Check console for details.');
+}
 
 // State
 let items = [];
@@ -36,6 +43,8 @@ const locationBtns = document.querySelectorAll('.location-btn');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded');
+    console.log('Add button:', addBtn);
     setupRealtimeListener();
     setTodayDate();
     
@@ -126,8 +135,8 @@ function renderItems() {
     });
 }
 
-// Open modal
-function openModal(itemId = null) {
+// Open modal (make it global for onclick)
+window.openModal = function(itemId = null) {
     if (itemId) {
         const item = items.find(i => i.id === itemId);
         if (item) {
@@ -199,8 +208,8 @@ function saveItem() {
     closeModal();
 }
 
-// Delete item
-function deleteItem(itemId) {
+// Delete item (make it global for onclick)
+window.deleteItem = function(itemId) {
     if (confirm('Delete this item?')) {
         const itemRef = ref(database, `items/${itemId}`);
         remove(itemRef);
