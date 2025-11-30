@@ -1,5 +1,36 @@
-// Storage key
-const STORAGE_KEY = 'witf_items';
+// Import Firebase
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getDatabase, ref, set, onValue, remove, push } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCQz3cfhvrj1k6u-jWX8pvLBlBh-PvfUgo",
+  authDomain: "witf-app.firebaseapp.com",
+  databaseURL: "https://witf-app-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "witf-app",
+  storageBucket: "witf-app.firebasestorage.app",
+  messagingSenderId: "576239871878",
+  appId: "1:576239871878:web:9f60b6ed0b7f511f0b6e07",
+  measurementId: "G-SJTWDGYTSL"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+    appId: "1:123456789012:web:abcdefghijklmnop"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+const itemsRef = ref(database, 'items');
 
 // State
 let items = [];
@@ -18,8 +49,7 @@ const locationBtns = document.querySelectorAll('.location-btn');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    loadItems();
-    renderItems();
+    setupRealtimeListener();
     setTodayDate();
     
     addBtn.addEventListener('click', () => openModal());
@@ -39,17 +69,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Load items from localStorage
-function loadItems() {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-        items = JSON.parse(stored);
-    }
-}
-
-// Save items to localStorage
-function saveItems() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+// Setup realtime listener
+function setupRealtimeListener() {
+    onValue(itemsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            items = Object.keys(data).map(key => ({
+                id: key,
+                ...data[key]
+            }));
+        } else {
+            items = [];
+        }
+        renderItems();
+    });
 }
 
 // Calculate days until expiry
@@ -160,36 +193,30 @@ function saveItem() {
     
     if (editingItemId) {
         // Update existing item
-        const index = items.findIndex(i => i.id === editingItemId);
-        if (index !== -1) {
-            items[index] = {
-                ...items[index],
-                name,
-                location: selectedLocation,
-                date
-            };
-        }
+        const itemRef = ref(database, `items/${editingItemId}`);
+        set(itemRef, {
+            name,
+            location: selectedLocation,
+            date
+        });
     } else {
         // Add new item
-        items.push({
-            id: Date.now().toString(),
+        const newItemRef = push(itemsRef);
+        set(newItemRef, {
             name,
             location: selectedLocation,
             date
         });
     }
     
-    saveItems();
-    renderItems();
     closeModal();
 }
 
 // Delete item
 function deleteItem(itemId) {
     if (confirm('Delete this item?')) {
-        items = items.filter(i => i.id !== itemId);
-        saveItems();
-        renderItems();
+        const itemRef = ref(database, `items/${itemId}`);
+        remove(itemRef);
     }
 }
 
